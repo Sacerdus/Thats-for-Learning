@@ -1,0 +1,590 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+
+namespace ConsoleApplication1
+{
+    class Game
+    {
+
+       static int maxUnitsCount = 35;
+       public int unitsCount;
+       public int heroIndex;
+
+       public struct UnitData{
+           public UnitType type;
+           public int row;
+           public int column;
+           public int health;
+           public WeaponType weapon;
+        }
+       bool[,] FogOfWar = new bool[rowCount, columnCount+1];
+       public UnitData[] unitsData = new UnitData[maxUnitsCount];
+
+
+        const char CellSymbol_empty = ' ';
+        const char CellSymbol_hero = 'H';
+        const char CellSymbol_wall = '#';
+        const char CellSymbol_orc = 'O';
+        const char CellSymbol_exit = 'e';
+        const char CellSymbol_heart = 'L';
+        const char CellSymbol_water = 'w';
+        const char CellSymbol_GreatOrc = 'o';
+        const char CellSymbol_tree = 't';
+        const char CellSymbol_FogOfWar ='\u2593';
+
+        const char CellSymbol_Weapon_lance = 'l';
+        const char CellSymbol_Weapon_saber = 'S';
+        const char CellSymbol_Weapon_greatSword = 'G';
+       // const char CellSymbol_
+
+        const int rowCount=20;
+        const int columnCount=35;
+        char[,] LevelData = new char[rowCount, columnCount + 1];
+        char[,] LevelData1 = new char[rowCount, columnCount + 1];
+
+        string[,] Map ={
+                       {"###################################"},//1
+                       {"#                   #  O       # L#"},//2
+                       {"# ###################  O          #"},//3
+                       {"#            # L#  L# ######## ####"},//4
+                       {"###########  ##O#  G# #L#l#L#  #ww#"},//5
+                       {"# OL#SO #       # ### #  o  #  #ww#"},//6
+                       {"# ##### #     ###     #        #ww#"},//7
+                       {"#              O# ##############ww#"},//8
+                       {"# ##### #     ###    O # t t t tww#"},//9
+                       {"# O #O  #       ####   #        ww#"},//10
+                       {"######### #######LO    # t t t t w#"},//11
+                       {"#      ## ##  H                  ww"},//12
+                       {"#    t     t    #O    O# t t t t w#"},//13
+                       {"#wt             ########         w#"},//14
+                       {"wwwt t     t     tttttt          w#"},//15
+                       {"#www                             w#"},//16
+                       {"#wwwwt     t                     w#"},//17
+                       {"#wwwwwwwwwwwwwww  ttttt         Lw#"},//18
+                       {"#wwwwwwwwwwwwwwwwwwwwwwwwwwwww  ww#"},//19
+                       {"###############################e###"},//20
+                       
+
+                     };
+
+
+
+
+       
+        /////////////////Проба Буфера//////////////
+        const int screenRows = 30;
+        const int screenColumns = 80;
+
+       public struct ConsoleSymbolData
+        {
+           public char symbol;
+           public ConsoleColor symbolColor;
+           public ConsoleColor backgroundColor;
+
+        }
+        
+        ConsoleSymbolData[,] backBuffer = new ConsoleSymbolData[screenRows, screenColumns];
+        ConsoleSymbolData[,] screenBuffer = new ConsoleSymbolData[screenRows, screenColumns];
+
+
+
+      public  void RenderSystemInitialize()
+        {
+            Console.CursorSize = 1;
+            Console.CursorVisible = false;
+          
+          
+            for(int r=0;r<screenRows;r++)
+                for (int c = 0; c < screenColumns; c++)
+                {
+                    backBuffer[r, c].symbol =(char) 0;
+                    backBuffer[r, c].symbolColor = ConsoleColor.Gray;
+                    backBuffer[r, c].backgroundColor = ConsoleColor.Black;
+
+                    screenBuffer[r, c] = backBuffer[r, c];
+                }
+        }
+
+     public void RenderSystemClear()
+      {
+          for (int r = 0; r < screenRows; r++)
+              for (int c = 0; c < screenColumns; c++)
+              {
+                  backBuffer[r, c].symbol = '\0';
+                  backBuffer[r, c].backgroundColor = ConsoleColor.Black;
+              }
+      }
+    public  void RenderSystemDrawChar(int r, int c, char symbol, ConsoleColor symbolColor,ConsoleColor backgroundColor)
+      {
+          backBuffer[r, c].symbol = symbol;
+          backBuffer[r, c].symbolColor = symbolColor;
+          backBuffer[r, c].backgroundColor = backgroundColor;
+ 
+      }
+
+     public void RenderSystemDrawText(int r, int c, string text, ConsoleColor symbolColor,ConsoleColor backgroundColor)
+      {
+          int column = c;
+          char[] symbol = text.ToCharArray();
+          foreach (char ch in symbol)
+          {
+              RenderSystemDrawChar(r, column, ch, symbolColor,backgroundColor);
+              column++;
+          }
+      }
+        
+     public void RenderSystemFlush()
+      {
+          bool screenBufferModified = false;
+          for (int r = 0; r < screenRows; r++)
+          {
+              for (int c = 0; c < screenColumns; c++)
+              {
+                  if (
+                         (backBuffer[r, c].symbol != screenBuffer[r, c].symbol)
+                      || (backBuffer[r, c].symbolColor != screenBuffer[r, c].symbolColor)
+                      || (backBuffer[r,c].backgroundColor != screenBuffer[r,c].backgroundColor)
+                      
+                   )
+                      screenBuffer[r, c] = backBuffer[r, c];
+                  Console.SetCursorPosition(c, r);
+                  Console.ForegroundColor = screenBuffer[r, c].symbolColor;
+                  Console.BackgroundColor = screenBuffer[r, c].backgroundColor;
+                  
+                  Console.Write(screenBuffer[r, c].symbol);
+
+                  screenBufferModified = true;
+              } 
+              Console.WriteLine();
+          } 
+          if (screenBufferModified) Console.SetCursorPosition(0, 0);
+
+      }
+        ////////////////////////////////////////// 
+
+
+
+
+        //Определяем персонажей.
+       public enum UnitType 
+        {
+            UnitType_None=0,
+            UnitType_Hero,
+            UnitType_Orc,
+           UnitType_GreatOrc
+        };
+        
+       public UnitType unitType= new UnitType();
+        //Определяем оружице.
+       public enum WeaponType 
+        {
+            WeaponType_None=0,
+            WeaponType_Fist,
+            WeaponType_Saber,
+            WeaponType_GreatSword,
+            WeaponType_Lance
+        }
+        //Придаем жизни красок.
+        ConsoleColor GetColor(char cellSymbol)
+        {
+            switch (cellSymbol)
+            {
+                case CellSymbol_wall:               return ConsoleColor.Gray;
+                case CellSymbol_hero:               return ConsoleColor.Yellow;
+                case CellSymbol_orc:                return ConsoleColor.Green;
+                case CellSymbol_exit:               return ConsoleColor.Magenta;
+                case CellSymbol_heart:              return ConsoleColor.Red;
+                case CellSymbol_water:              return ConsoleColor.Blue;
+                case CellSymbol_GreatOrc:           return ConsoleColor.DarkGreen;
+                case CellSymbol_tree:               return ConsoleColor.Green;
+                case CellSymbol_Weapon_lance:       return ConsoleColor.DarkCyan;
+                case CellSymbol_Weapon_saber:       return ConsoleColor.DarkCyan;
+                case CellSymbol_Weapon_greatSword:  return ConsoleColor.DarkCyan;
+                case CellSymbol_FogOfWar:           return ConsoleColor.Gray;
+            }
+            return ConsoleColor.White;
+        }
+        //Именование оружия. Меч ЛЕДЕНЕЦ ЖИ!
+        public string WeaponName(WeaponType weaponType)
+        {
+            switch (weaponType)
+            {
+                case WeaponType.WeaponType_None: return "Ничего";
+                case WeaponType.WeaponType_Fist: return "Кулаки";
+                case WeaponType.WeaponType_GreatSword: return "Большой Меч!";                
+                case WeaponType.WeaponType_Saber: return "Сабелька";
+                case WeaponType.WeaponType_Lance: return "Копье";
+            }
+             return "Ничего";
+        }
+
+        //Осазноем силу люлей.
+        int GetWeaponDamage(WeaponType weaponType) // Weapon DMG
+        {
+            switch (weaponType)
+            {
+                case WeaponType.WeaponType_None:        { return 1;  }
+                case WeaponType.WeaponType_Fist:        { return 5;  }
+                case WeaponType.WeaponType_Saber:       { return 15; }
+                case WeaponType.WeaponType_GreatSword:  { return 30; }
+                case WeaponType.WeaponType_Lance:       { return 50; }
+            }
+            return 1;
+        }
+        //Разбираем здоровице.
+       public int GetUnitStartHP(UnitType unitType)// Start HP
+        {
+            switch (unitType)
+            {
+                case UnitType.UnitType_Hero:        { return 50; }
+                case UnitType.UnitType_Orc:         { return 45; }
+                case UnitType.UnitType_GreatOrc:    { return 200; }
+
+            }
+            return 0;
+        }
+        //Швабры в руки!
+        WeaponType GetStartWeapon(UnitType unitType)
+        {
+            switch (unitType)
+            {
+                case UnitType.UnitType_Hero:            return WeaponType.WeaponType_Fist;
+                case UnitType.UnitType_Orc:             return WeaponType.WeaponType_Saber;
+                case UnitType.UnitType_GreatOrc:        return WeaponType.WeaponType_GreatSword;
+            }
+            return WeaponType.WeaponType_None;
+
+        }
+        //Понимаем персонажей.
+        UnitType GetUnitTypeFromCell(char cellSymbol)
+        {
+            switch (cellSymbol)
+            {
+                case CellSymbol_orc: return UnitType.UnitType_Orc;
+                case CellSymbol_hero: return UnitType.UnitType_Hero;
+                case CellSymbol_GreatOrc: return UnitType.UnitType_GreatOrc;
+            }
+            return UnitType.UnitType_None;
+        }
+        //Понимаем оружице.
+        WeaponType GetWeaponTypeFromCell(char cellSymbol)
+        {
+            switch(cellSymbol)
+            {
+                case CellSymbol_Weapon_saber: return WeaponType.WeaponType_Saber;
+                case CellSymbol_Weapon_greatSword: return WeaponType.WeaponType_GreatSword;
+            }
+            return WeaponType.WeaponType_None;
+        }
+        //Символы для рендера
+        char GetRenderCell( char cellSymbol)
+        {
+            switch (cellSymbol)
+            {
+                case CellSymbol_empty:              return ' '; 
+                case CellSymbol_exit:               return (char)127;
+                case CellSymbol_hero:               return '\u263A';
+                case CellSymbol_wall:               return '\u2588';
+                case CellSymbol_orc:                return '\u263B';
+                case CellSymbol_heart:              return (char)3;
+                case CellSymbol_water:              return '\u2591';
+                case CellSymbol_GreatOrc:           return '\u263B';
+                case CellSymbol_tree:               return '\u25B2';
+                case CellSymbol_FogOfWar:           return'\u2593';
+                case CellSymbol_Weapon_lance:       return '\u2191';
+                case CellSymbol_Weapon_saber:       return (char)108;
+                case CellSymbol_Weapon_greatSword:  return '\u253C';
+            }
+            return '?';
+        }
+        //Постепенно убираем туман войны.
+        void RevealFogOfWar(int row, int column)
+    {
+        for (int r = row - 1; r <= row+1; r++)
+            for (int c = column - 1; c <= column + 1; c++)
+            {
+                
+                FogOfWar[r, c] = false;
+            }
+            bool rowup=false;
+            bool rowdown=false;
+            bool colup=false;
+            bool coldown=false;
+            for(int i=0;(i<5)&&(rowup!=true);i++)
+                if ((LevelData[row + i, column] == CellSymbol_wall)) { FogOfWar[row + i, column] = false; rowup = true; } else { FogOfWar[row + i, column] = false; } //Косячит на выходе
+            for(int i=0;(i<5)&&(rowdown!=true);i++)
+                if (LevelData[row - i, column] == CellSymbol_wall) { FogOfWar[row - i, column] = false; rowdown = true; } else { FogOfWar[row - i, column] = false; }
+            for (int i = 0; (i < 5) && (coldown != true); i++)
+                if (LevelData[row, column - i] == CellSymbol_wall) { FogOfWar[row, column - i] = false; coldown = true; } else { FogOfWar[row, column - i] = false; }
+            for (int i = 0; (i < 5) && (colup != true); i++)
+                if ((LevelData[row , column +i] == CellSymbol_wall)) { FogOfWar[row , column+i] = false; colup = true; } else { FogOfWar[row , column+i] = false; }// тут бяда, на карте есть дырка где это условие косячит(справа у воды), надо добавить исключение.
+    }
+
+        // Убираем туман войны
+        public void RemoveFogOfWar()
+        {
+            for (int i = 0; i < rowCount; i++)
+                for (int j = 0; j < columnCount; j++) 
+                    FogOfWar[i, j] = false;
+        }
+        //Двигаем Юнита.
+        public bool MoveUnitTo(int Index, int row, int column)
+        {
+            //Трупы не ходят! увы.
+            if (unitsData[Index].health <= 0)
+            { return true; };
+            //
+            bool canMove = false;
+            char unitSymbol = LevelData[unitsData[Index].row, unitsData[Index].column];
+            char destinationSymbol = LevelData[row, column];
+            switch (destinationSymbol)
+            {
+                case CellSymbol_empty:
+                    canMove = true;
+                    break;
+                case CellSymbol_hero: goto case CellSymbol_orc;
+                case CellSymbol_orc:
+                    {
+
+                        UnitType destinationUnitType = GetUnitTypeFromCell(destinationSymbol);
+                        if (destinationUnitType != unitsData[Index].type)
+                        {
+                            for (int i = 0; i < unitsCount; i++)
+                            {
+                                if (unitsData[i].health <= 0) continue;
+                                if ((unitsData[i].row == row) && (unitsData[i].column == column))
+                                {
+                                    int damage = GetWeaponDamage(unitsData[Index].weapon);
+                                    unitsData[i].health -= damage;
+                                    if (unitsData[i].health <= 0) LevelData[row, column] = CellSymbol_empty;
+                                    break;
+                                }
+                            }
+                        }
+                        break;
+                    }
+            }
+           if (unitsData[Index].type == UnitType.UnitType_Hero)
+            {
+                switch (destinationSymbol)
+                {
+                    case CellSymbol_Weapon_greatSword: goto case CellSymbol_Weapon_saber;
+                    case CellSymbol_Weapon_saber:
+
+                        canMove = true;
+                        WeaponType weaponType = GetWeaponTypeFromCell(destinationSymbol);
+                        if (unitsData[heroIndex].weapon < weaponType)
+                        {
+                            unitsData[heroIndex].weapon = weaponType;
+                        }
+                        break;
+
+                    case CellSymbol_exit:
+                        canMove = true;
+                        return false;
+                    case CellSymbol_heart:
+                        canMove = true;
+                        unitsData[Index].health += 25;
+                        break;
+                }               
+            }
+            if (canMove)
+            {
+                LevelData[unitsData[Index].row, unitsData[Index].column] = CellSymbol_empty;
+                unitsData[Index].row = row;
+                unitsData[Index].column = column;
+                LevelData[unitsData[Index].row, unitsData[Index].column] = unitSymbol;
+                if (unitsData[Index].type == UnitType.UnitType_Hero)
+                { RevealFogOfWar(row, column); }
+            }
+            DrawMap();
+            return true;
+        }
+        //Электронный Мозг.
+      public void MoveAI()
+       {
+           for (int u = 0; u < unitsCount; u++)
+           {
+               if (u == heroIndex) continue;
+
+               if (unitsData[u].health == 0) continue;
+
+               int distanceToHeroR = Math.Abs(unitsData[heroIndex].row - unitsData[u].row);
+               int distanceToHeroC = Math.Abs(unitsData[heroIndex].column - unitsData[u].column);
+
+               if ((distanceToHeroC + distanceToHeroR) == 1)
+               {
+                   MoveUnitTo(u, unitsData[heroIndex].row, unitsData[heroIndex].column);
+               }
+               else
+               {
+                   Random x= new Random();
+                   int c =x.Next(0,4);
+                   switch (c)
+                   {
+                       case 0: MoveUnitTo(u, unitsData[u].row-1, unitsData[u].column); break;
+                       case 1: MoveUnitTo(u, unitsData[u].row+1, unitsData[u].column); break;
+                       case 2: MoveUnitTo(u, unitsData[u].row, unitsData[u].column-1); break;
+                       case 3: MoveUnitTo(u, unitsData[u].row, unitsData[u].column+1); break;
+                   }
+               }
+           }
+
+           
+       }
+        //Загрузка карты
+      public  void Init()
+        {
+            unitsCount = 0;
+            for (int i = 0; i < rowCount; i++)
+            {
+                string Level = Map[i, 0];
+                char[] helchar = Level.ToCharArray(0, columnCount);
+                for (int j = 0; j < (columnCount); j++)
+                {
+                    FogOfWar[i, j] = true;
+                    LevelData[i, j] = helchar[j];
+                   // LevelData[i, j] = LevelData1[i, j];
+                    switch (LevelData[i, j])
+                    { 
+                        case CellSymbol_hero:
+                            heroIndex = unitsCount;
+                            goto case CellSymbol_orc;
+                        case CellSymbol_GreatOrc:
+                            goto case CellSymbol_orc;
+                        case CellSymbol_orc:
+                                unitType = GetUnitTypeFromCell(LevelData[i, j]);
+                                unitsData[unitsCount].type = unitType;
+                                unitsData[unitsCount].row = i;
+                                unitsData[unitsCount].column = j;
+                                unitsData[unitsCount].health = GetUnitStartHP(unitType);
+                                unitsData[unitsCount].weapon = GetStartWeapon(unitType);
+                                unitsCount++;
+                                break;       
+                    }
+                }
+            }
+            RevealFogOfWar(unitsData[heroIndex].row, unitsData[heroIndex].column);
+            DrawMap();
+        }
+        //Отрисовка карты
+      public  void DrawMap()
+        {
+
+            Console.SetCursorPosition(0, 0);
+            RenderSystemClear();
+
+            for (int i = 0; i < rowCount; i++)
+            {
+                for (int j = 0; j < (columnCount); j++)
+                {
+                    if (FogOfWar[i, j] == false)
+                    {                        
+                        LevelData1[i, j] = GetRenderCell(LevelData[i, j]);
+                        
+                        RenderSystemDrawChar(i,j,LevelData1[i,j],GetColor(LevelData[i, j]),ConsoleColor.Black);
+                    }
+                    else
+                    {
+                        Console.ForegroundColor = GetColor(CellSymbol_FogOfWar);
+                        LevelData1[i,j] = GetRenderCell(CellSymbol_FogOfWar);
+                        
+                        RenderSystemDrawChar(i,j,LevelData1[i,j], GetColor(CellSymbol_FogOfWar),ConsoleColor.Black);
+                    }
+                };
+               
+            }
+
+            int health = unitsData[heroIndex].health;
+            int damage = GetWeaponDamage(unitsData[heroIndex].weapon);
+
+            RenderSystemDrawText(21, 0, "Здоровье", ConsoleColor.Green,ConsoleColor.Black);
+            RenderSystemDrawText(21, 9, health.ToString(), ConsoleColor.Red, ConsoleColor.Black);
+            RenderSystemDrawText(21, 12, "Урон", ConsoleColor.Green, ConsoleColor.Black);
+            RenderSystemDrawText(21, 17, damage.ToString(), ConsoleColor.Red, ConsoleColor.Black);
+            RenderSystemDrawText(22,0,"Экипированно:",ConsoleColor.Green,ConsoleColor.Black);
+            RenderSystemDrawText(22, 14, WeaponName(unitsData[heroIndex].weapon), ConsoleColor.Red, ConsoleColor.Black);
+            RenderSystemFlush();
+
+          /* 
+            //Console.WriteLine("{0}-X.  {1}- Y. ", unitsData[heroIndex].row, unitsData[heroIndex].column);
+           Console.WriteLine("WASD-Управление.  R- начать уровень заного. ESC- Выход.");*/
+        }
+        //а это костыль.
+      public int GetHeroIndex()
+    {
+        return heroIndex;
+    }
+    }
+    
+    class Program
+    {
+        
+        static void Main(string[] args)
+        {
+            Console.SetWindowSize(81, 31);
+            Game G = new Game();
+            G.Init();
+            G.RenderSystemClear();
+            G.RenderSystemInitialize();
+            bool GameNotEnd = true;
+            Console.CursorVisible = false;
+            
+            
+            ConsoleKeyInfo C;
+            do
+            {
+                C = Console.ReadKey(true);
+                switch (C.Key)
+                {
+                    case ConsoleKey.W:
+                        GameNotEnd = G.MoveUnitTo(G.GetHeroIndex(), G.unitsData[G.GetHeroIndex()].row - 1, G.unitsData[G.GetHeroIndex()].column);
+                        break;
+                    case ConsoleKey.A:
+                        GameNotEnd = G.MoveUnitTo(G.GetHeroIndex(), G.unitsData[G.GetHeroIndex()].row, G.unitsData[G.GetHeroIndex()].column - 1);
+                        break;
+                    case ConsoleKey.S:
+                        GameNotEnd = G.MoveUnitTo(G.GetHeroIndex(), G.unitsData[G.GetHeroIndex()].row + 1, G.unitsData[G.GetHeroIndex()].column);
+                        break;
+                    case ConsoleKey.D:
+                        GameNotEnd = G.MoveUnitTo(G.GetHeroIndex(), G.unitsData[G.GetHeroIndex()].row, G.unitsData[G.GetHeroIndex()].column + 1);
+                        break;
+                     case ConsoleKey.U: // Хоткей для тестов разных штук.
+                        
+                        
+                        G.RenderSystemDrawChar(5,5,'\u2555',ConsoleColor.Green,ConsoleColor.Red);
+                        G.RenderSystemFlush();
+                        G.RemoveFogOfWar();
+                        
+                         break;
+                    case ConsoleKey.R:
+                        
+                        G.Init();
+                        break;
+                    case ConsoleKey.Escape:
+                        GameNotEnd = false;
+                        Console.ForegroundColor = ConsoleColor.Red;
+                        Console.WriteLine("Покеда 0/");
+                        break;
+                    default:
+
+                        break;
+
+                }
+                if (G.unitsData[G.GetHeroIndex()].health <= 0)
+                    GameNotEnd = false;
+               // if(G.unitsData[G.GetHeroIndex()].health<G.GetUnitStartHP(Game.UnitType.UnitType_Hero))
+                //    G.unitsData[G.GetHeroIndex()].health++;
+              //  G.MoveAI();// Выключенно из-за лагов.
+            } while (GameNotEnd);
+
+            Console.ReadKey();
+        }
+
+
+
+        
+    }
+}
