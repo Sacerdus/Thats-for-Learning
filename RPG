@@ -2,7 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-//using NameSpaceClassInIncludedFile;
+using System.IO;
+
 
 namespace ConsoleApplication1
 {
@@ -48,7 +49,9 @@ namespace ConsoleApplication1
         char[,] LevelData1 = new char[rowCount, columnCount + 1];
 
        public string[] Log = new string[6];
-        string[,] Map ={
+      public string[,] Map= {{" "},};
+        
+      /*  {
                        {"###################################"},//1
                        {"#                   #  O       # L#"},//2
                        {"# ###################  O          #"},//3
@@ -69,7 +72,8 @@ namespace ConsoleApplication1
                        {"#wwwwwwwwwwwwwww  ttttt         Lw#"},//18
                        {"#wwwwwwwwwwwwwwwwwwwwwwwwwwwww  ww#"},//19
                        {"###############################e###"},//20
-                     };      
+                     };     
+       */
         /////////////////Графический Буфер//////////////
         const int screenRows = 30;
         const int screenColumns = 80;
@@ -516,7 +520,7 @@ namespace ConsoleApplication1
         //Отрисовка лога
       public void DrawLog()
       {
-          
+          Log[0] = "====Лог боя====";
           for (int i = 0; i <= Count; i++)
           {
               if (i == 0) RenderSystemDrawText(21 + i, 7, Log[i], ConsoleColor.Green, ConsoleColor.Black);else
@@ -528,7 +532,18 @@ namespace ConsoleApplication1
       //Загрузка карты
       public void Init()
         {
-            Log[0] = "====Лог боя====";
+           // string[,] Map;
+            int c= 1;
+            int RowIndex = 0;
+            FileStream MapLoad = new FileStream("Map"+c+".map", FileMode.Open,FileAccess.ReadWrite);
+            StreamReader SR = new StreamReader(MapLoad);
+           while(!SR.EndOfStream){
+                Map[RowIndex,0]=SR.ReadLine();
+               RowIndex++;
+           }
+           SR.Close();
+           MapLoad.Close();
+
             unitsCount = 0;
             for (int i = 0; i < rowCount; i++)
             {
